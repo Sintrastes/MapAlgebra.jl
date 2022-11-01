@@ -70,6 +70,68 @@ function readRasterSingle(band, x, y, type)
     res[1]
 end
 
+"""
+    applyFocal(r::Raster, default::Any, f::Function)
+
+Apply a focal operation to the given raster.
+
+
+
+Example usage:
+
+    @pipe elevation |> applyFocal(_, (focus) -> begin
+        center = focus(0, 0)
+        right  = focus(0, 1)
+        left   = focus(0, -1)
+        up     = focus(1, 0)
+        down   = focus(-1, 0)
+
+        // Calculate grade along each axis, and output multiple bands.
+        // Assuming 30 meter spacing of pixels.
+        [
+            atan((right - center) / 30),
+            atan((left - center) / 30),
+            atan((up - center) / 30)),
+            atan((down - center) / 30)
+        ]
+    end)
+"""
+function applyFocal(r::Raster, default::Any, f::Function)
+    Raster(
+        r.width,
+        r.height,
+        (x,y) -> begin
+            focus = (xOff, yOff) -> begin
+                r.getValue(x - xOff, y + yOff)
+            end
+
+            f(focus)
+        end
+    )
+end
+
+"""
+    anisoSlope(r::Raster)
+
+Calculate the slope of an elevation raster along each axis in a 4-band raster.
+"""
+anisoSlope(r::Raster) = applyFocal(r, NaN, (focus) -> begin
+    center = focus(0, 0)
+    right  = focus(0, 1)
+    left   = focus(0, -1)
+    up     = focus(1, 0)
+    down   = focus(-1, 0)
+
+    # Calculate grade along each axis, and output multiple bands.
+    # Assuming 30 meter spacing of pixels.
+    [
+        atan((right - center) / 30),
+        atan((left - center) / 30),
+        atan((up - center) / 30),
+        atan((down - center) / 30)
+    ]
+end)
+
 # Unary operations on rasters
 
 """
