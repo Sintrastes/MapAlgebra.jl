@@ -125,82 +125,37 @@ Base.:/(xRaster::Raster, yRaster::Raster)  = lift2(/, xRaster, yRaster)
 
 # Raster - Scalar Operations
 
-function Base.:^(xRaster::Raster, c::Any)
+"""
+lift2C(f::Function, c::Any, raster::Raster) 
+
+Take a function of two arguments, and apply it to a raster and a scalar.
+ 
+Can be used to define new binary operators combining a scalar with a raster.
+"""
+function lift2C(f::Function, c::Any, raster::Raster) 
     Raster(
-        xRaster.width, 
-        xRaster.height, 
-        (x,y) -> xRaster.getValue(x, y) ^ c
+        raster.width, 
+        raster.height, 
+        (x,y) -> f(c, yRaster.getValue(x, y))
     )
 end
 
-function Base.:^(c::Any, xRaster::Raster)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        c ^ (x,y) -> xRaster.getValue(x, y)
-    )
-end
+Base.:^(xRaster::Raster, c::Any) = lift2C(^, c, xRaster)
 
-function Base.:+(xRaster::Raster, c::Any)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        (x,y) -> xRaster.getValue(x, y) + c
-    )
-end
+Base.:^(c::Any, xRaster::Raster) = lift2C(^, c, xRaster)
 
-function Base.:+(c::Any, xRaster::Raster)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        c + (x,y) -> xRaster.getValue(x, y)
-    )
-end
+Base.:+(xRaster::Raster, c::Any) = lift2C(+, c, xRaster)
 
-function Base.:*(xRaster::Raster, c::Any)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        (x,y) -> xRaster.getValue(x, y) * c
-    )
-end
+Base.:+(c::Any, xRaster::Raster) = lift2C(+, c, xRaster)
 
-function Base.:*(c::Core.Number, xRaster::Raster)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        c * (x,y) -> xRaster.getValue(x, y)
-    )
-end
+Base.:*(xRaster::Raster, c::Any) = lift2C(*, c, xRaster)
 
-function Base.:-(xRaster::Raster, c::Any)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        (x,y) -> xRaster.getValue(x, y) - c
-    )
-end
+Base.:*(c::Core.Number, xRaster::Raster) = lift2C(*, c, xRaster)
 
-function Base.:-(c::Any, xRaster::Raster)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        c - (x,y) -> xRaster.getValue(x, y)
-    )
-end
+Base.:-(xRaster::Raster, c::Any) = lift2C(-, c, xRaster)
 
-function Base.:/(xRaster::Raster, c::Any)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        (x,y) -> xRaster.getValue(x, y) / c
-    )
-end
+Base.:-(c::Any, xRaster::Raster) = lift2C(-, c, xRaster)
 
-function Base.:/(c::Any, xRaster::Raster)
-    Raster(
-        xRaster.width, 
-        xRaster.height, 
-        c / (x,y) -> xRaster.getValue(x, y)
-    )
-end
+Base.:/(xRaster::Raster, c::Any) = lift2C(/, c, xRaster)
+
+Base.:/(c::Any, xRaster::Raster) = lift2C(/, c, xRaster)
