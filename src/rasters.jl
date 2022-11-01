@@ -60,7 +60,7 @@ end
 """
     writeToFile(r::Raster, path::String)
 
-Write a raster to file.
+Write a raster to file. Works in parallel by default.
 """
 function writeToFile(r::Raster, path::String)
 
@@ -111,7 +111,10 @@ function applyFocal(r::Raster, default::Any, f::Function)
         r.height,
         (x,y) -> begin
             focus = (xOff, yOff) -> begin
-                r.getValue(x - xOff, y + yOff)
+                res = default
+                try res = r.getValue(x - xOff, y + yOff) catch end
+
+                res
             end
 
             f(focus)
