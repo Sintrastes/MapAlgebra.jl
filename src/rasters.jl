@@ -57,6 +57,15 @@ function readRaster(path::String)
     end
 end
 
+"""
+    writeToFile(r::Raster, path::String)
+
+Write a raster to file.
+"""
+function writeToFile(r::Raster, path::String)
+
+end
+
 function readRasterSingle(band, x, y, type)
     res = Vector([0])
     GDAL.gdalrasterio(
