@@ -21,14 +21,14 @@ struct Raster
 end 
 
 """
-    readRaster(path)
+    readRaster(path::String)
 
 Load a GDAL-compatible raster file from disk.
 
 Loads multi-band rasters in as a raster whose `getValue`
  function returns an array.
 """
-function readRaster(path)
+function readRaster(path::String)
     dataset = GDAL.gdalopen(path, GDAL.GA_ReadOnly)
     numBands = GDAL.gdalgetrastercount(dataset)
 
