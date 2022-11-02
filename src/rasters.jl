@@ -63,9 +63,55 @@ end
 Write a raster to file. Works in parallel by default.
 """
 function writeToFile(r::Raster, path::String)
+    driver = GDAL.gdalgetdriverbyname("GTiff")
+    dataset = GDAL.gdalcreate(
+        driver,
+        path,
+        r.width,
+        r.height,
+        numBands,
+        GDAL.GDT_Float64,
+        []
+    )
 
+    numBands = length(r.getValue(0,0))
+
+    if numBands != 1
+        # Simple sequential algorithm for now
+        for bandNum in collect(1 : numBands)
+            band = GDAL.gdalgetrasterband(dataset, bandNum)
+
+            for i in collect(1 : r.height - 1)
+                values = @pipe collect(1 : r.width) |> 
+                    Base.map((j) -> r.getValue(j, i)[bandNum] , _)
+
+                GDAL.gdalrasterio(
+                    band,
+                    GDAL.GF_Write,
+                    0, i,
+                    r.width, 1,
+                    values, 
+                    r.width, 1,
+                    GDAL.GDT_Float64,
+                    0, 0
+                )
+
+                GDAL.gdalflushcache(dataset)
+            end
+        end
+    else
+        # TODO: Handle single-band case
+    end
+
+    GDAL.gdalflushcache(dataset)
 end
 
+"""
+    readRasterSingle(band, x, y, type)
+
+Utility to write read a single pixel value from a
+ raster band.
+"""
 function readRasterSingle(band, x, y, type)
     res = Vector([0])
     GDAL.gdalrasterio(
@@ -83,8 +129,6 @@ end
     applyFocal(r::Raster, default::Any, f::Function)
 
 Apply a focal operation to the given raster.
-
-
 
 Example usage:
 
