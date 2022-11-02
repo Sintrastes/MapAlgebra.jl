@@ -63,6 +63,8 @@ end
 Write a raster to file. Works in parallel by default.
 """
 function writeToFile(r::Raster, path::String)
+    numBands = length(r.getValue(0,0))
+    
     driver = GDAL.gdalgetdriverbyname("GTiff")
     dataset = GDAL.gdalcreate(
         driver,
@@ -73,8 +75,6 @@ function writeToFile(r::Raster, path::String)
         GDAL.GDT_Float64,
         []
     )
-
-    numBands = length(r.getValue(0,0))
 
     if numBands != 1
         # Simple sequential algorithm for now
@@ -195,11 +195,21 @@ end)
 
 Apply a function `f` lazily to the result values of the raster.
 """
-map(f::Function, r::Raster) = Raster(
-    r.width, 
-    r.height, 
-    (x,y) -> f(r.getValue(x, y))
-)
+function map(f::Function, r::Raster)
+    if typeof(r.getValue(0, 0)) <: Vector{<:Any}
+        Raster(
+            r.width, 
+            r.height, 
+            (x,y) -> Base.map(f, r.getValue(x, y))
+        )
+    else
+        Raster(
+            r.width, 
+            r.height, 
+            (x,y) -> f(r.getValue(x, y))
+        )
+    end
+end
 
 Base.cos(r::Raster) = map(cos, r)
 
@@ -210,6 +220,8 @@ Base.tan(r::Raster) = map(tan, r)
 Base.atan(r::Raster) = map(atan, r)
 
 Base.log(r::Raster) = map(log, r)
+
+Base.abs(r::Raster) = map(abs, r)
 
 # Raster - Raster operations
 
@@ -226,11 +238,42 @@ Can be used to define new binary operators on rasters.
 function lift2(f::Function, xRaster::Raster, yRaster::Raster) 
     @assert xRaster.width == yRaster.width
     @assert xRaster.height == yRaster.height
+
+    # Determine the type of operations to use based on 
+    # the values in the raster.
+    pf = pointwiseApply(
+        typeof(xRaster.getValue(0,0)), 
+        typeof(yRaster.getValue(0,0)),
+        f
+    )
+
     Raster(
         xRaster.width, 
         xRaster.height, 
-        (x,y) -> f(xRaster.getValue(x, y), yRaster.getValue(x, y))
+        (x,y) -> begin
+            pf(xRaster.getValue(x, y), yRaster.getValue(x, y))
+        end
     )
+end
+
+"""
+    pointwiseApply(A, B, f, x::A, y::B)
+
+Helper function to apply the given pointwise (either in raster-raster or scalar-raster
+ situations) where appropriate based on the types of the elements.
+
+"""
+pointwiseApply(A, B, f) = (x, y) -> begin
+    if A <: Vector{<:Any} && B <: Vector{<:Any}
+        println("Both vectors")
+        return @pipe zip(x,y) |> Base.map(args -> f(args[1], args[2]), _)
+    elseif A <: Vector{<:Any} && !(B <: Vector{<:Any})
+        return @pipe x |> Base.map((xa) -> f(xa, y), _)
+    elseif !(A <: Vector{<:Any}) && B <: Vector{<:Any}
+        return @pipe y |> Base.map((ya) -> f(x, ya), _)
+    else
+        return f(x, y)
+    end
 end
 
 Base.:+(xRaster::Raster, yRaster::Raster) = lift2(+, xRaster, yRaster)
@@ -251,10 +294,18 @@ Take a function of two arguments, and apply it to a raster and a scalar.
 Can be used to define new binary operators combining a scalar with a raster.
 """
 function lift2C(f::Function, c::Any, raster::Raster) 
+    # Determine the type of operations to use based on 
+    # the values in the raster.
+    pf = pointwiseApply(
+        typeof(c), 
+        typeof(raster.getValue(0,0)),
+        f
+    )
+
     Raster(
         raster.width, 
         raster.height, 
-        (x,y) -> f(c, yRaster.getValue(x, y))
+        (x,y) -> pf(c, raster.getValue(x, y))
     )
 end
 
