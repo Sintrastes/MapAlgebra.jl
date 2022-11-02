@@ -32,3 +32,19 @@ toblers(θ) = 6 * e ^ (-3.5 * abs(tan(θ) + 0.05))
 # Build up an anisotropic walking speed raster and write it to file.
 MapAlgebra.writeToFile(toblers(slope), "/path/to/out.tif")
 ```
+
+Estimate walking velocity (fluent/function chaining style):
+
+```julia
+@pipe MapAlgebra.readRaster("/path/to/elevation/raster.tif")
+    |> MapAlgebra.anisoSlope(_)
+    |> map((θ) -> 6 * e ^ (-3.5 * abs(tan(θ) + 0.05)), _)
+    |> MapAlgebra.writeToFile(_, "/path/to/out.tif")
+```
+
+Take the max of all raster bands point-wise:
+
+```julia
+@pipe MapAlgebra.readRaster("/path/to/multi-band.tif")
+    |> map(max, _)
+```
